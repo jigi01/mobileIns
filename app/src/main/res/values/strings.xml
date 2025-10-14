@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">My Application</string>
+    <string name="widget_description">Виджет игры Жуки с курсом золота и рекордом</string>
+</resources>
