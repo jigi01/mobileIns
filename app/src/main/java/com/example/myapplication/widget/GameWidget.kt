@@ -27,7 +27,7 @@ class GameWidget : GlanceAppWidget() {
                 CbrApi.getGoldPrice().toInt()
             }
         } catch (e: Exception) {
-            268 // Fallback значение
+            268 
         }
         
         provideContent {

@@ -19,7 +19,6 @@ object CbrApi {
         try {
             val calendar = Calendar.getInstance()
             
-            // Пробуем последние 10 дней (ЦБ не публикует данные в выходные/праздники)
             for (daysAgo in 0..10) {
                 calendar.time = Date()
                 calendar.add(Calendar.DAY_OF_MONTH, -daysAgo)
@@ -43,8 +42,7 @@ object CbrApi {
                 val factory = DocumentBuilderFactory.newInstance()
                 val builder = factory.newDocumentBuilder()
                 val document = builder.parse(xmlString.byteInputStream())
-                
-                // Ищем Record с атрибутом Code="1" (Золото)
+
                 val records = document.getElementsByTagName("Record")
                 for (i in 0 until records.length) {
                     val record = records.item(i) as Element
@@ -54,15 +52,12 @@ object CbrApi {
                         val buyNode = record.getElementsByTagName("Buy").item(0)
                         val buyPrice = buyNode?.textContent?.replace(",", ".")?.toDoubleOrNull()
                         
-                        // Цена за тройскую унцию, конвертируем в рубли за грамм
                         if (buyPrice != null && buyPrice > 0) {
                             return@withContext buyPrice
                         }
                     }
                 }
             }
-            
-            // Если не нашли данные за 10 дней - возвращаем примерную цену
             8338.0
         } catch (e: Exception) {
             e.printStackTrace()

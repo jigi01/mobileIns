@@ -1,6 +1,5 @@
 package com.example.myapplication.ui.screens
 
-import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -18,39 +17,32 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
-import androidx.compose.ui.graphics.nativeCanvas
-import androidx.compose.ui.res.imageResource
 import androidx.core.content.ContextCompat
 import com.example.myapplication.R
-import com.example.myapplication.data.Bug
-import com.example.myapplication.data.Bonus
-import com.example.myapplication.data.GameState
-import com.example.myapplication.database.GameDatabase
-import com.example.myapplication.database.ScoreEntity
-import com.example.myapplication.utils.SoundManager
-import com.example.myapplication.api.CbrApi
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
-import androidx.compose.runtime.withFrameNanos
-import androidx.compose.runtime.DisposableEffect
+import com.example.myapplication.viewmodel.GameViewModel
 import android.content.Context
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager as AndroidSensorManager
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import org.koin.androidx.compose.koinViewModel
 
 @Composable
 fun GameScreen(
     maxBugs: Int = 10,
     gameSpeed: Float = 5f,
-    roundDuration: Int = 60
+    roundDuration: Int = 60,
+    viewModel: GameViewModel = koinViewModel()
 ) {
     val context = LocalContext.current
-    val database = remember { GameDatabase.getDatabase(context) }
-    val coroutineScope = rememberCoroutineScope()
-    val soundManager = remember { SoundManager(context) }
+    
+    val gameState by viewModel.gameState.collectAsStateWithLifecycle()
+    val canvasSize by viewModel.canvasSize.collectAsStateWithLifecycle()
+    val playerName by viewModel.playerName.collectAsStateWithLifecycle()
+    val difficultyLevel by viewModel.difficultyLevel.collectAsStateWithLifecycle()
+    val gravityX by viewModel.gravityX.collectAsStateWithLifecycle()
+    val gravityY by viewModel.gravityY.collectAsStateWithLifecycle()
     
     val goldenBugBitmap = remember {
         try {
@@ -70,15 +62,6 @@ fun GameScreen(
         }
     }
     
-    var gameState by remember { mutableStateOf(GameState()) }
-    var canvasSize by remember { mutableStateOf(Pair(0f, 0f)) }
-    var playerName by remember { mutableStateOf("Игрок") }
-    var difficultyLevel by remember { mutableIntStateOf(5) }
-    var showNameDialog by remember { mutableStateOf(false) }
-    
-    var gravityX by remember { mutableFloatStateOf(0f) }
-    var gravityY by remember { mutableFloatStateOf(0f) }
-    
     val sensorManager = remember { context.getSystemService(Context.SENSOR_SERVICE) as AndroidSensorManager }
     val accelerometer = remember { sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) }
     
@@ -86,11 +69,12 @@ fun GameScreen(
         val listener = object : SensorEventListener {
             override fun onSensorChanged(event: SensorEvent?) {
                 if (gameState.bonusActive && event != null) {
-                    gravityX = event.values[0] * 0.5f
-                    gravityY = event.values[1] * 0.5f
+                    val newGravityX = event.values[0] * 0.5f
+                    val newGravityY = event.values[1] * 0.5f
+                    viewModel.setGravity(newGravityX, newGravityY)
                     
-                    if (kotlin.math.abs(gravityX) > 1f || kotlin.math.abs(gravityY) > 1f) {
-                        soundManager.playBugScream()
+                    if (kotlin.math.abs(newGravityX) > 1f || kotlin.math.abs(newGravityY) > 1f) {
+                        viewModel.soundManager.playBugScream()
                     }
                 }
             }
@@ -104,134 +88,7 @@ fun GameScreen(
         
         onDispose {
             sensorManager.unregisterListener(listener)
-            gravityX = 0f
-            gravityY = 0f
-        }
-    }
-    
-    DisposableEffect(Unit) {
-        onDispose {
-            soundManager.release()
-        }
-    }
-    
-    LaunchedEffect(gameState.isPlaying) {
-        if (gameState.isPlaying && !gameState.isPaused) {
-            while (isActive && gameState.timeRemaining > 0) {
-                delay(1000)
-                var newState = gameState.copy(
-                    timeRemaining = gameState.timeRemaining - 1,
-                    timeSinceLastBonus = gameState.timeSinceLastBonus + 1,
-                    timeSinceLastGoldenBug = gameState.timeSinceLastGoldenBug + 1
-                )
-                
-                if (newState.bonusActive && newState.bonusTimeLeft > 0) {
-                    newState = newState.copy(bonusTimeLeft = newState.bonusTimeLeft - 1)
-                    if (newState.bonusTimeLeft <= 0) {
-                        newState = newState.copy(bonusActive = false)
-                    }
-                }
-                
-                if (newState.timeSinceLastBonus >= 15 && newState.bonus == null && canvasSize.first > 0) {
-                    newState = newState.copy(
-                        bonus = Bonus.createRandom(0, canvasSize.first, canvasSize.second),
-                        timeSinceLastBonus = 0
-                    )
-                }
-                
-                if (newState.timeSinceLastGoldenBug >= 20 && newState.goldenBug == null && canvasSize.first > 0) {
-                    val goldenBug = Bug(
-                        id = -1,
-                        position = androidx.compose.ui.geometry.Offset(
-                            x = kotlin.random.Random.nextFloat() * (canvasSize.first - 120f).coerceAtLeast(0f),
-                            y = kotlin.random.Random.nextFloat() * (canvasSize.second - 120f).coerceAtLeast(0f)
-                        ),
-                        velocity = androidx.compose.ui.geometry.Offset(
-                            x = (kotlin.random.Random.nextFloat() - 0.5f) * 3f,
-                            y = (kotlin.random.Random.nextFloat() - 0.5f) * 3f
-                        ),
-                        emoji = "🪳",
-                        points = newState.goldPrice,
-                        size = 150f
-                    )
-                    newState = newState.copy(
-                        goldenBug = goldenBug,
-                        timeSinceLastGoldenBug = 0
-                    )
-                }
-                
-                gameState = newState
-                
-                if (gameState.timeRemaining <= 0) {
-                    gameState = gameState.copy(isPlaying = false)
-                    
-                    coroutineScope.launch {
-                        database.gameDao().insertScore(
-                            ScoreEntity(
-                                playerId = 0,
-                                playerName = playerName,
-                                score = gameState.score,
-                                difficultyLevel = difficultyLevel
-                            )
-                        )
-                    }
-                }
-            }
-        }
-    }
-    
-    LaunchedEffect(gameState.isPlaying) {
-        if (gameState.isPlaying && !gameState.isPaused) {
-            var lastFrameTime = 0L
-            var frameCount = 0
-            
-            while (isActive && gameState.isPlaying) {
-                withFrameNanos { frameTimeNanos ->
-                    if (lastFrameTime != 0L) {
-                        val deltaTime = (frameTimeNanos - lastFrameTime) / 1_000_000f
-                        
-                        val updatedBugs = gameState.bugs.map { bug ->
-                            val newBug = bug.copy()
-                            if (gameState.bonusActive) {
-                                newBug.updatePosition(canvasSize.first, canvasSize.second, gameSpeed / 3f, gravityX, gravityY)
-                            } else {
-                                newBug.updatePosition(canvasSize.first, canvasSize.second, gameSpeed / 3f)
-                            }
-                            newBug
-                        }
-                        
-                        frameCount++
-                        val shouldSpawnNewBug = frameCount % 60 == 0 && 
-                                               gameState.bugs.size < maxBugs && 
-                                               canvasSize.first > 0
-                        
-                        if (shouldSpawnNewBug) {
-                            val newBug = Bug.createRandom(
-                                gameState.nextBugId,
-                                canvasSize.first,
-                                canvasSize.second
-                            )
-                            gameState = gameState.copy(
-                                bugs = updatedBugs + newBug,
-                                nextBugId = gameState.nextBugId + 1
-                            )
-                        } else {
-                            gameState = gameState.copy(bugs = updatedBugs)
-                        }
-                        
-                        gameState.goldenBug?.let { goldenBug ->
-                            val newGoldenBug = goldenBug.copy()
-                            if (gameState.bonusActive) {
-                                newGoldenBug.updatePosition(canvasSize.first, canvasSize.second, gameSpeed / 4f, gravityX, gravityY)
-                            } else {
-                                newGoldenBug.updatePosition(canvasSize.first, canvasSize.second, gameSpeed / 4f)
-                            }
-                            gameState = gameState.copy(goldenBug = newGoldenBug)
-                        }
-                    }
-                    lastFrameTime = frameTimeNanos
-                }
-            }
+            viewModel.setGravity(0f, 0f)
         }
     }
 
@@ -296,7 +153,7 @@ fun GameScreen(
                 
                 OutlinedTextField(
                     value = playerName,
-                    onValueChange = { playerName = it },
+                    onValueChange = { viewModel.setPlayerName(it) },
                     label = { Text("Ваше имя") },
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -307,7 +164,7 @@ fun GameScreen(
                     Text("Уровень сложности: $difficultyLevel")
                     Slider(
                         value = difficultyLevel.toFloat(),
-                        onValueChange = { difficultyLevel = it.toInt() },
+                        onValueChange = { viewModel.setDifficultyLevel(it.toInt()) },
                         valueRange = 1f..10f,
                         steps = 8
                     )
@@ -317,14 +174,7 @@ fun GameScreen(
                 
                 Button(
                     onClick = {
-                        coroutineScope.launch {
-                            val goldPrice = CbrApi.getGoldPrice().toInt()
-                            gameState = GameState(
-                                isPlaying = true,
-                                timeRemaining = roundDuration,
-                                goldPrice = goldPrice
-                            )
-                        }
+                        viewModel.startGame(maxBugs, gameSpeed, roundDuration)
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -339,39 +189,11 @@ fun GameScreen(
                     .fillMaxSize()
                     .pointerInput(Unit) {
                         detectTapGestures { offset ->
-                            val clickedGoldenBug = gameState.goldenBug?.let { if (it.contains(offset)) it else null }
-                            if (clickedGoldenBug != null) {
-                                soundManager.playBonusSound()
-                                gameState = gameState
-                                    .addScore(clickedGoldenBug.points)
-                                    .copy(goldenBug = null)
-                            } else {
-                                val clickedBonus = gameState.bonus?.let { if (it.contains(offset)) it else null }
-                                if (clickedBonus != null) {
-                                    soundManager.playBonusSound()
-                                    gameState = gameState.copy(
-                                        bonus = null,
-                                        bonusActive = true,
-                                        bonusTimeLeft = 10,
-                                        score = gameState.score + 50
-                                    )
-                                } else {
-                                    val clickedBug = gameState.bugs.find { it.contains(offset) }
-                                    if (clickedBug != null) {
-                                        soundManager.playBugHitSound()
-                                        gameState = gameState
-                                            .addScore(clickedBug.points)
-                                            .copy(bugs = gameState.bugs - clickedBug)
-                                    } else {
-                                        soundManager.playMissSound()
-                                        gameState = gameState.addMiss()
-                                    }
-                                }
-                            }
+                            viewModel.onTap(offset)
                         }
                     }
             ) {
-                canvasSize = Pair(size.width, size.height)
+                viewModel.setCanvasSize(size.width, size.height)
                 
                 if (gameState.bonusActive) {
                     drawCircle(
