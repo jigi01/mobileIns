@@ -42,7 +42,7 @@ class GameViewModel(
     private val _gravityY = MutableStateFlow(0f)
     val gravityY: StateFlow<Float> = _gravityY.asStateFlow()
 
-    val soundManager = SoundManager(context)
+    val soundManager by lazy { SoundManager(context) }
 
     private var gameTimerJob: Job? = null
     private var gameLoopJob: Job? = null

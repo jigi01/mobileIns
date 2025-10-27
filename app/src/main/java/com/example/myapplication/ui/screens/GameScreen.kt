@@ -36,6 +36,7 @@ fun GameScreen(
     viewModel: GameViewModel = koinViewModel()
 ) {
     val context = LocalContext.current
+    val applicationContext = remember { context.applicationContext }
     
     val gameState by viewModel.gameState.collectAsStateWithLifecycle()
     val canvasSize by viewModel.canvasSize.collectAsStateWithLifecycle()
@@ -46,7 +47,7 @@ fun GameScreen(
     
     val goldenBugBitmap = remember {
         try {
-            ContextCompat.getDrawable(context, R.drawable.golden_bug)?.let { drawable ->
+            ContextCompat.getDrawable(applicationContext, R.drawable.golden_bug)?.let { drawable ->
                 val bitmap = android.graphics.Bitmap.createBitmap(
                     drawable.intrinsicWidth,
                     drawable.intrinsicHeight,
@@ -62,7 +63,7 @@ fun GameScreen(
         }
     }
     
-    val sensorManager = remember { context.getSystemService(Context.SENSOR_SERVICE) as AndroidSensorManager }
+    val sensorManager = remember { applicationContext.getSystemService(Context.SENSOR_SERVICE) as AndroidSensorManager }
     val accelerometer = remember { sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) }
     
     DisposableEffect(gameState.bonusActive) {
