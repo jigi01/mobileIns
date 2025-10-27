@@ -9,5 +9,5 @@ import org.koin.dsl.module
 val appModule = module {
     single { GameDatabase.getDatabase(androidContext()) }
     
-    viewModel { GameViewModel(androidContext(), get()) }
+    viewModel { GameViewModel(androidContext().applicationContext, get()) }
 }

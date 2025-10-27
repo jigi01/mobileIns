@@ -60,7 +60,7 @@ class GameViewModel(
     }
 
     fun setGravity(x: Float, y: Float) {
-        _gravityX.value = x
+        _gravityX.value = -x
         _gravityY.value = y
     }
 
