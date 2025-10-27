@@ -220,52 +220,61 @@ fun GameScreen(
                 }
                 
                 gameState.bonus?.let { bonus ->
-                    drawText(
-                        textMeasurer = textMeasurer,
-                        text = bonus.emoji,
-                        topLeft = Offset(
-                            x = bonus.position.x,
-                            y = bonus.position.y
-                        ),
-                        style = androidx.compose.ui.text.TextStyle(fontSize = 64.sp)
-                    )
-                }
-                
-                gameState.goldenBug?.let { goldenBug ->
-                    goldenBugBitmap?.let { bitmap ->
-                        drawImage(
-                            image = bitmap,
-                            srcOffset = androidx.compose.ui.unit.IntOffset.Zero,
-                            srcSize = androidx.compose.ui.unit.IntSize(bitmap.width, bitmap.height),
-                            dstOffset = androidx.compose.ui.unit.IntOffset(
-                                x = goldenBug.position.x.toInt(),
-                                y = goldenBug.position.y.toInt()
-                            ),
-                            dstSize = androidx.compose.ui.unit.IntSize(150, 150)
-                        )
-                    } ?: run {
+                    if (bonus.position.x >= 0 && bonus.position.x < size.width &&
+                        bonus.position.y >= 0 && bonus.position.y < size.height) {
                         drawText(
                             textMeasurer = textMeasurer,
-                            text = goldenBug.emoji,
+                            text = bonus.emoji,
                             topLeft = Offset(
-                                x = goldenBug.position.x,
-                                y = goldenBug.position.y
+                                x = bonus.position.x.coerceIn(0f, size.width - 100f),
+                                y = bonus.position.y.coerceIn(0f, size.height - 100f)
                             ),
-                            style = androidx.compose.ui.text.TextStyle(fontSize = 96.sp)
+                            style = androidx.compose.ui.text.TextStyle(fontSize = 64.sp)
                         )
                     }
                 }
                 
+                gameState.goldenBug?.let { goldenBug ->
+                    if (goldenBug.position.x >= 0 && goldenBug.position.x < size.width &&
+                        goldenBug.position.y >= 0 && goldenBug.position.y < size.height) {
+                        goldenBugBitmap?.let { bitmap ->
+                            drawImage(
+                                image = bitmap,
+                                srcOffset = androidx.compose.ui.unit.IntOffset.Zero,
+                                srcSize = androidx.compose.ui.unit.IntSize(bitmap.width, bitmap.height),
+                                dstOffset = androidx.compose.ui.unit.IntOffset(
+                                    x = goldenBug.position.x.coerceIn(0f, size.width - 150f).toInt(),
+                                    y = goldenBug.position.y.coerceIn(0f, size.height - 150f).toInt()
+                                ),
+                                dstSize = androidx.compose.ui.unit.IntSize(150, 150)
+                            )
+                        } ?: run {
+                            drawText(
+                                textMeasurer = textMeasurer,
+                                text = goldenBug.emoji,
+                                topLeft = Offset(
+                                    x = goldenBug.position.x.coerceIn(0f, size.width - 150f),
+                                    y = goldenBug.position.y.coerceIn(0f, size.height - 150f)
+                                ),
+                                style = androidx.compose.ui.text.TextStyle(fontSize = 96.sp)
+                            )
+                        }
+                    }
+                }
+                
                 gameState.bugs.forEach { bug ->
-                    drawText(
-                        textMeasurer = textMeasurer,
-                        text = bug.emoji,
-                        topLeft = Offset(
-                            x = bug.position.x + 10f,
-                            y = bug.position.y + 10f
-                        ),
-                        style = androidx.compose.ui.text.TextStyle(fontSize = 72.sp)
-                    )
+                    if (bug.position.x >= 0 && bug.position.x < size.width &&
+                        bug.position.y >= 0 && bug.position.y < size.height) {
+                        drawText(
+                            textMeasurer = textMeasurer,
+                            text = bug.emoji,
+                            topLeft = Offset(
+                                x = (bug.position.x + 10f).coerceIn(0f, size.width - 100f),
+                                y = (bug.position.y + 10f).coerceIn(0f, size.height - 100f)
+                            ),
+                            style = androidx.compose.ui.text.TextStyle(fontSize = 72.sp)
+                        )
+                    }
                 }
             }
         }

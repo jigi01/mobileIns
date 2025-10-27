@@ -61,7 +61,58 @@ class GameViewModel(
 
     fun setCanvasSize(width: Float, height: Float) {
         Log.d(TAG, "setCanvasSize: $width x $height")
+        val oldSize = _canvasSize.value
         _canvasSize.value = Pair(width, height)
+        
+        // Корректируем позиции объектов при изменении размера холста
+        if (oldSize.first > 0 && oldSize.second > 0 && 
+            (oldSize.first != width || oldSize.second != height)) {
+            Log.d(TAG, "Canvas size changed, adjusting objects positions")
+            
+            val currentState = _gameState.value
+            
+            // Корректируем позиции жуков
+            val adjustedBugs = currentState.bugs.mapNotNull { bug ->
+                val newX = (bug.position.x / oldSize.first * width).coerceIn(0f, width - 120f)
+                val newY = (bug.position.y / oldSize.second * height).coerceIn(0f, height - 120f)
+                
+                if (newX >= 0 && newX < width && newY >= 0 && newY < height) {
+                    bug.copy(position = Offset(newX, newY))
+                } else {
+                    null
+                }
+            }
+            
+            // Корректируем позицию бонуса
+            val adjustedBonus = currentState.bonus?.let { bonus ->
+                val newX = (bonus.position.x / oldSize.first * width).coerceIn(0f, width - 100f)
+                val newY = (bonus.position.y / oldSize.second * height).coerceIn(0f, height - 100f)
+                
+                if (newX >= 0 && newX < width && newY >= 0 && newY < height) {
+                    bonus.copy(position = Offset(newX, newY))
+                } else {
+                    null
+                }
+            }
+            
+            // Корректируем позицию золотого жука
+            val adjustedGoldenBug = currentState.goldenBug?.let { goldenBug ->
+                val newX = (goldenBug.position.x / oldSize.first * width).coerceIn(0f, width - 150f)
+                val newY = (goldenBug.position.y / oldSize.second * height).coerceIn(0f, height - 150f)
+                
+                if (newX >= 0 && newX < width && newY >= 0 && newY < height) {
+                    goldenBug.copy(position = Offset(newX, newY))
+                } else {
+                    null
+                }
+            }
+            
+            _gameState.value = currentState.copy(
+                bugs = adjustedBugs,
+                bonus = adjustedBonus,
+                goldenBug = adjustedGoldenBug
+            )
+        }
     }
 
     fun setPlayerName(name: String) {
