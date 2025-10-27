@@ -1,6 +1,7 @@
 package com.example.myapplication.viewmodel
 
 import android.content.Context
+import android.util.Log
 import androidx.compose.ui.geometry.Offset
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -24,6 +25,10 @@ class GameViewModel(
     private val database: GameDatabase
 ) : ViewModel() {
 
+    init {
+        Log.d(TAG, "GameViewModel created, context: ${context::class.simpleName}")
+    }
+
     private val _gameState = MutableStateFlow(GameState())
     val gameState: StateFlow<GameState> = _gameState.asStateFlow()
 
@@ -42,12 +47,20 @@ class GameViewModel(
     private val _gravityY = MutableStateFlow(0f)
     val gravityY: StateFlow<Float> = _gravityY.asStateFlow()
 
-    val soundManager by lazy { SoundManager(context) }
+    val soundManager by lazy {
+        Log.d(TAG, "SoundManager lazy initialization")
+        SoundManager(context)
+    }
 
     private var gameTimerJob: Job? = null
     private var gameLoopJob: Job? = null
 
+    companion object {
+        private const val TAG = "GameViewModel"
+    }
+
     fun setCanvasSize(width: Float, height: Float) {
+        Log.d(TAG, "setCanvasSize: $width x $height")
         _canvasSize.value = Pair(width, height)
     }
 
@@ -65,6 +78,7 @@ class GameViewModel(
     }
 
     fun startGame(maxBugs: Int, gameSpeed: Float, roundDuration: Int) {
+        Log.d(TAG, "startGame called")
         viewModelScope.launch {
             val goldPrice = try {
                 CbrApi.getGoldPrice().toInt()
@@ -256,6 +270,7 @@ class GameViewModel(
     }
 
     override fun onCleared() {
+        Log.d(TAG, "onCleared called")
         super.onCleared()
         gameTimerJob?.cancel()
         gameLoopJob?.cancel()

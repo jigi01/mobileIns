@@ -1,5 +1,6 @@
 package com.example.myapplication.ui.screens
 
+import android.util.Log
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -35,8 +36,13 @@ fun GameScreen(
     roundDuration: Int = 60,
     viewModel: GameViewModel = koinViewModel()
 ) {
+    Log.d(TAG, "GameScreen composition started")
+    
     val context = LocalContext.current
-    val applicationContext = remember { context.applicationContext }
+    val applicationContext = remember { 
+        Log.d(TAG, "Remembering applicationContext")
+        context.applicationContext 
+    }
     
     val gameState by viewModel.gameState.collectAsStateWithLifecycle()
     val canvasSize by viewModel.canvasSize.collectAsStateWithLifecycle()
@@ -46,6 +52,7 @@ fun GameScreen(
     val gravityY by viewModel.gravityY.collectAsStateWithLifecycle()
     
     val goldenBugBitmap = remember {
+        Log.d(TAG, "Loading golden bug bitmap")
         try {
             ContextCompat.getDrawable(applicationContext, R.drawable.golden_bug)?.let { drawable ->
                 val bitmap = android.graphics.Bitmap.createBitmap(
@@ -63,10 +70,17 @@ fun GameScreen(
         }
     }
     
-    val sensorManager = remember { applicationContext.getSystemService(Context.SENSOR_SERVICE) as AndroidSensorManager }
-    val accelerometer = remember { sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) }
+    val sensorManager = remember { 
+        Log.d(TAG, "Getting SensorManager")
+        applicationContext.getSystemService(Context.SENSOR_SERVICE) as AndroidSensorManager 
+    }
+    val accelerometer = remember { 
+        Log.d(TAG, "Getting accelerometer")
+        sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) 
+    }
     
     DisposableEffect(gameState.bonusActive) {
+        Log.d(TAG, "DisposableEffect: bonusActive=${gameState.bonusActive}")
         val listener = object : SensorEventListener {
             override fun onSensorChanged(event: SensorEvent?) {
                 if (gameState.bonusActive && event != null) {
@@ -84,10 +98,12 @@ fun GameScreen(
         }
         
         if (gameState.bonusActive && accelerometer != null) {
+            Log.d(TAG, "Registering sensor listener")
             sensorManager.registerListener(listener, accelerometer, AndroidSensorManager.SENSOR_DELAY_GAME)
         }
         
         onDispose {
+            Log.d(TAG, "DisposableEffect onDispose")
             sensorManager.unregisterListener(listener)
             viewModel.setGravity(0f, 0f)
         }
@@ -267,3 +283,5 @@ fun GameScreen(
         }
     }
 }
+
+private const val TAG = "GameScreen"

@@ -6,8 +6,14 @@ import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import android.util.Log
 
 class SoundManager(private val context: Context) {
+    
+    init {
+        Log.d(TAG, "SoundManager created, context: ${context::class.simpleName}")
+    }
+    
     private val vibrator: Vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         val vibratorManager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
         vibratorManager.defaultVibrator
@@ -17,10 +23,12 @@ class SoundManager(private val context: Context) {
     }
     
     fun playBugHitSound() {
+        Log.d(TAG, "playBugHitSound")
         vibrate(50)
     }
     
     fun playBonusSound() {
+        Log.d(TAG, "playBonusSound")
         vibrate(100)
     }
     
@@ -52,6 +60,11 @@ class SoundManager(private val context: Context) {
     }
     
     fun release() {
+        Log.d(TAG, "release called")
         // Cleanup if needed
+    }
+    
+    companion object {
+        private const val TAG = "SoundManager"
     }
 }
